@@ -28,9 +28,30 @@ func CreateContainer(dockerHost DockerHost, config *dockerclient.ContainerConfig
 	if err != nil {
 		return err
 	}
-
-	if err = docker.PullImage(config.Image, nil); err != nil {
-		return fmt.Errorf("Unable to pull image: %s", err)
+	// xinxian0458: for none-networking installation
+	imageExist := false
+	
+	if images, err := docker.ListImages(false); err != nil {
+		return fmt.Errorf("Unable to list images: %s", err)
+	} else {
+	ImageLoop:
+		for _, image := range images {
+			for _, tag := range image.RepoTags {
+				if tag == config.Image {
+					imageExist = true
+					break ImageLoop
+				}
+			}
+		}
+	}
+	
+	if !imageExist {
+		fmt.Printf("pulling image %v", config.Image)
+		if err = docker.PullImage(config.Image, nil); err != nil {
+			return fmt.Errorf("Unable to pull image: %s", err)
+		}
+	} else {
+		fmt.Printf("image %v already exist", config.Image)
 	}
 
 	var authConfig *dockerclient.AuthConfig
